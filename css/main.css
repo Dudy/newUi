@@ -1,7 +1,27 @@
 .dot-grid {
     background-color: white;
-    background-image: 
-        linear-gradient(to right, #f8f9fa 1px, transparent 1px),
-        linear-gradient(to bottom, #f8f9fa 1px, transparent 1px);
+    background-image: linear-gradient(to right, #f8f9fa 1px, transparent 1px),
+    linear-gradient(to bottom, #f8f9fa 1px, transparent 1px);
     background-size: 10px 10px;
+}
+
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, #3b82f6 50%);
+    border-bottom-right-radius: inherit;
+    z-index: 10;
+}
+
+.resize-handle:hover {
+    background: linear-gradient(135deg, transparent 50%, #2563eb 50%);
+}
+
+.placed-card {
+    min-width: 100px;
+    min-height: 80px;
 }
