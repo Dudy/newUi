@@ -6,6 +6,7 @@
     <title>Meine Website</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/main.css" rel="stylesheet">
 </head>
 <body class="d-flex flex-column min-vh-100">
     <!-- Navigation -->
@@ -74,17 +75,29 @@
                                 <a class="nav-link" href="#">Link 3</a>
                             </li>
                         </ul>
+                        <hr>
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="mb-3 draggable-square" style="width: 100px; height: 100px; background-color: red; cursor: pointer;"></div>
+                            <div class="mb-3 draggable-square" style="width: 100px; height: 100px; background-color: green; cursor: pointer;"></div>
+                            <div class="draggable-square" style="width: 100px; height: 100px; background-color: blue; cursor: pointer;"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="col d-flex flex-column">
-                    <div class="border rounded p-3 flex-grow-1" style="margin: 3px;">
-                        <h1>Willkommen</h1>
-                        <p>Hier kommt Ihr Inhalt hin.</p>
+                    <div class="border rounded p-3 flex-grow-1 dot-grid" style="margin: 3px;">
+
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- Statuszeile -->
+    <div class="bg-light border-top py-2">
+        <div class="container-fluid">
+            <span id="status-text">Status: </span>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="bg-dark text-white text-center py-3 mt-auto">
@@ -95,5 +108,6 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
