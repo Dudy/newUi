@@ -4,14 +4,18 @@ const state = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-    const squares = document.querySelectorAll('.draggable-square');
+    const cards = document.querySelectorAll('.draggable-card');
     const contentArea = document.querySelector('.dot-grid');
     const statusText = document.getElementById('status-text');
-    let draggedSquare = null;
+    let draggedCard = null;
     let isDragging = false;
-    let currentColor = '';
+    let componentName = '';
+    let cardHTML = '';
     let lastSnappedX = 0;
     let lastSnappedY = 0;
+    let draggedFromContent = false;
+    let originalCard = null;
+    let componentIndex = -1;
     
     // Setze Position des Content-Bereichs auf relative
     contentArea.style.position = 'relative';
@@ -29,127 +33,184 @@ document.addEventListener('DOMContentLoaded', function() {
         statusText.textContent = 'Status: ';
     });
 
-    squares.forEach(square => {
-        square.addEventListener('mousedown', function(e) {
-            e.preventDefault();
-            isDragging = true;
-            currentColor = window.getComputedStyle(this).backgroundColor;
-
-            // Erstelle temporäres Quadrat
-            draggedSquare = document.createElement('div');
-            draggedSquare.style.width = '100px';
-            draggedSquare.style.height = '100px';
-            draggedSquare.style.backgroundColor = currentColor;
-            draggedSquare.style.position = 'absolute';
-            draggedSquare.style.pointerEvents = 'none';
-            draggedSquare.style.zIndex = '1000';
-            document.body.appendChild(draggedSquare);
-
-            updateSquarePosition(e);
+    // Event-Listener für Cards in der Seitenleiste
+    cards.forEach(card => {
+        card.addEventListener('mousedown', function(e) {
+            startDragging(e, this, false);
         });
     });
 
+    // Event-Delegation für platzierte Cards im Content-Bereich
+    contentArea.addEventListener('mousedown', function(e) {
+        const clickedCard = e.target.closest('.placed-card');
+        if (clickedCard) {
+            startDragging(e, clickedCard, true);
+        }
+    });
+
+    function startDragging(e, sourceCard, fromContent) {
+        e.preventDefault();
+        isDragging = true;
+        draggedFromContent = fromContent;
+        
+        // Bei platzierten Cards ist das erste Child-Element die eigentliche Card
+        const actualCard = sourceCard.classList.contains('card') ? sourceCard : sourceCard.querySelector('.card');
+        componentName = actualCard ? actualCard.dataset.componentName : sourceCard.dataset.componentName;
+        cardHTML = actualCard ? actualCard.outerHTML : sourceCard.outerHTML;
+
+        if (fromContent) {
+            // Merke die originale Card und ihren Index im State
+            originalCard = sourceCard;
+            const posX = parseInt(sourceCard.style.left);
+            const posY = parseInt(sourceCard.style.top);
+            componentIndex = state.components.findIndex(c => c.x === posX && c.y === posY && c.name === componentName);
+            
+            // Verstecke die originale Card während des Draggings
+            originalCard.style.opacity = '0';
+            originalCard.style.visibility = 'hidden';
+        }
+
+        // Erstelle temporäre Card
+        draggedCard = document.createElement('div');
+        draggedCard.innerHTML = cardHTML;
+        const innerCard = draggedCard.querySelector('.card');
+        if (innerCard) {
+            draggedCard = innerCard;
+        }
+        draggedCard.style.position = 'absolute';
+        draggedCard.style.pointerEvents = 'none';
+        draggedCard.style.zIndex = '1000';
+        draggedCard.style.width = '150px';
+        document.body.appendChild(draggedCard);
+
+        updateCardPosition(e);
+    }
+
     document.addEventListener('mousemove', function(e) {
-        if (isDragging && draggedSquare) {
-            updateSquarePosition(e);
+        if (isDragging && draggedCard) {
+            updateCardPosition(e);
         }
     });
 
     document.addEventListener('mouseup', function(e) {
-        if (isDragging && draggedSquare) {
-            // Prüfe, ob das Quadrat über dem Content-Bereich ist
+        if (isDragging && draggedCard) {
+            // Prüfe, ob die Card über dem Content-Bereich ist
             const contentRect = contentArea.getBoundingClientRect();
             const mouseX = e.clientX;
             const mouseY = e.clientY;
 
-            // Prüfe, ob das Quadrat vollständig im Content-Bereich ist
-            // Maus muss mindestens 50px vom Rand entfernt sein (halbe Quadratgröße)
-            if (mouseX >= contentRect.left + 50 && mouseX <= contentRect.right - 50 &&
-                mouseY >= contentRect.top + 50 && mouseY <= contentRect.bottom - 50) {
+            // Berechne die Dimensionen der Card
+            const cardRect = draggedCard.getBoundingClientRect();
+            const cardWidth = cardRect.width;
+            const cardHeight = cardRect.height;
+
+            // Prüfe, ob die Card vollständig im Content-Bereich ist
+            if (mouseX >= contentRect.left + cardWidth/2 && mouseX <= contentRect.right - cardWidth/2 &&
+                mouseY >= contentRect.top + cardHeight/2 && mouseY <= contentRect.bottom - cardHeight/2) {
                 
-                // Berechne die relative Position vom gerundeten Drag-Quadrat zum Content-Bereich
+                // Berechne die relative Position vom gerundeten Drag-Card zum Content-Bereich
                 const absoluteX = lastSnappedX - (contentRect.left + window.scrollX);
                 const absoluteY = lastSnappedY - (contentRect.top + window.scrollY);
                 
-                // Runde auf 10er-Raster für saubere Koordinaten, beginne bei 10
-                const relativeX = Math.max(10, Math.round(absoluteX / 10) * 10);
-                const relativeY = Math.max(10, Math.round(absoluteY / 10) * 10);
+                // Runde auf 10er-Raster für saubere Koordinaten, ohne Offset
+                const relativeX = Math.max(0, Math.round(absoluteX / 10) * 10);
+                const relativeY = Math.max(0, Math.round(absoluteY / 10) * 10);
                 
-                // Erstelle permanentes Quadrat im Content-Bereich
-                const permanentSquare = document.createElement('div');
-                permanentSquare.style.width = '100px';
-                permanentSquare.style.height = '100px';
-                permanentSquare.style.backgroundColor = currentColor;
-                permanentSquare.style.position = 'absolute';
-                permanentSquare.style.left = relativeX + 'px';
-                permanentSquare.style.top = relativeY + 'px';
-                
-                contentArea.appendChild(permanentSquare);
-                
-                // Konvertiere RGB zu Farbnamen
-                const colorName = rgbToColorName(currentColor);
-                
-                // Füge zum State hinzu
-                state.components.push({
-                    name: colorName,
-                    x: relativeX,
-                    y: relativeY
-                });
+                if (draggedFromContent && originalCard) {
+                    // Bewege die existierende Card
+                    originalCard.style.left = relativeX + 'px';
+                    originalCard.style.top = relativeY + 'px';
+                    originalCard.style.opacity = '1';
+                    originalCard.style.visibility = 'visible';
+                    
+                    // Aktualisiere State
+                    if (componentIndex >= 0) {
+                        state.components[componentIndex].x = relativeX;
+                        state.components[componentIndex].y = relativeY;
+                    }
+                } else {
+                    // Erstelle neue permanente Card im Content-Bereich
+                    const permanentCard = document.createElement('div');
+                    permanentCard.innerHTML = cardHTML;
+                    const cardElement = permanentCard.firstElementChild;
+                    cardElement.classList.add('placed-card');
+                    cardElement.style.position = 'absolute';
+                    cardElement.style.left = relativeX + 'px';
+                    cardElement.style.top = relativeY + 'px';
+                    cardElement.style.width = '150px';
+                    
+                    contentArea.appendChild(cardElement);
+                    
+                    // Füge zum State hinzu
+                    state.components.push({
+                        name: componentName,
+                        x: relativeX,
+                        y: relativeY
+                    });
+                }
                 
                 console.log('State:', state);
+            } else {
+                // Card wurde außerhalb fallengelassen
+                if (draggedFromContent && originalCard) {
+                    // Entferne die Card aus dem Content-Bereich und aus dem State
+                    originalCard.remove();
+                    if (componentIndex >= 0) {
+                        state.components.splice(componentIndex, 1);
+                    }
+                    console.log('State:', state);
+                }
+                // Wenn aus Seitenleiste gezogen: einfach verschwinden lassen (nichts zu tun)
             }
             
-            // Entferne temporäres Quadrat
-            draggedSquare.remove();
-            draggedSquare = null;
+            // Entferne temporäre Card
+            draggedCard.remove();
+            draggedCard = null;
             isDragging = false;
+            draggedFromContent = false;
+            originalCard = null;
+            componentIndex = -1;
         }
     });
 
-    function updateSquarePosition(e) {
-        if (draggedSquare) {
+    function updateCardPosition(e) {
+        if (draggedCard) {
             // Berechne Position relativ zum Content-Bereich
             const contentRect = contentArea.getBoundingClientRect();
-            const relativeX = e.pageX - (contentRect.left + window.scrollX) - 50;
-            const relativeY = e.pageY - (contentRect.top + window.scrollY) - 50;
+            const cardRect = draggedCard.getBoundingClientRect();
+            const cardWidth = cardRect.width;
+            const cardHeight = cardRect.height;
             
-            // Runde auf 10er-Raster, aber mindestens bei 10 beginnend
-            const snappedRelX = Math.max(10, Math.round(relativeX / 10) * 10) + 1;
-            const snappedRelY = Math.max(10, Math.round(relativeY / 10) * 10) + 1;
+            const relativeX = e.pageX - (contentRect.left + window.scrollX) - cardWidth/2;
+            const relativeY = e.pageY - (contentRect.top + window.scrollY) - cardHeight/2;
+            
+            // Runde auf 10er-Raster, ohne Minimum-Offset
+            const snappedRelX = Math.round(relativeX / 10) * 10;
+            const snappedRelY = Math.round(relativeY / 10) * 10;
             
             // Konvertiere zurück zu absoluten Koordinaten für die Anzeige
             const snappedX = snappedRelX + (contentRect.left + window.scrollX);
             const snappedY = snappedRelY + (contentRect.top + window.scrollY);
 
-            draggedSquare.style.left = snappedX + 'px';
-            draggedSquare.style.top = snappedY + 'px';
+            draggedCard.style.left = snappedX + 'px';
+            draggedCard.style.top = snappedY + 'px';
             
             // Speichere die aktuellen Raster-Positionen
             lastSnappedX = snappedX;
             lastSnappedY = snappedY;
             
-            // Prüfe, ob das Quadrat vollständig im Content-Bereich ist
+            // Prüfe, ob die Card vollständig im Content-Bereich ist
             const mouseX = e.clientX;
             const mouseY = e.clientY;
             
-            if (mouseX >= contentRect.left + 50 && mouseX <= contentRect.right - 50 &&
-                mouseY >= contentRect.top + 50 && mouseY <= contentRect.bottom - 50) {
+            if (mouseX >= contentRect.left + cardWidth/2 && mouseX <= contentRect.right - cardWidth/2 &&
+                mouseY >= contentRect.top + cardHeight/2 && mouseY <= contentRect.bottom - cardHeight/2) {
                 // Im Content-Bereich: voll sichtbar
-                draggedSquare.style.opacity = '1';
+                draggedCard.style.opacity = '1';
             } else {
                 // Außerhalb: halbtransparent
-                draggedSquare.style.opacity = '0.5';
+                draggedCard.style.opacity = '0.5';
             }
         }
-    }
-
-    function rgbToColorName(rgb) {
-        // Konvertiere RGB-String zu Farbnamen
-        const colorMap = {
-            'rgb(255, 0, 0)': 'red',
-            'rgb(0, 128, 0)': 'green',
-            'rgb(0, 0, 255)': 'blue'
-        };
-        return colorMap[rgb] || rgb;
     }
 });
