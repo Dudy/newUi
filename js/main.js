@@ -71,9 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const absoluteX = lastSnappedX - (contentRect.left + window.scrollX);
                 const absoluteY = lastSnappedY - (contentRect.top + window.scrollY);
                 
-                // Runde auf 10er-Raster für saubere Koordinaten
-                const relativeX = Math.round(absoluteX / 10) * 10;
-                const relativeY = Math.round(absoluteY / 10) * 10;
+                // Runde auf 10er-Raster für saubere Koordinaten, beginne bei 10
+                const relativeX = Math.max(10, Math.round(absoluteX / 10) * 10);
+                const relativeY = Math.max(10, Math.round(absoluteY / 10) * 10);
                 
                 // Erstelle permanentes Quadrat im Content-Bereich
                 const permanentSquare = document.createElement('div');
@@ -108,9 +108,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateSquarePosition(e) {
         if (draggedSquare) {
-            // Runde auf 10er-Raster
-            const snappedX = Math.round((e.pageX - 50) / 10) * 10;
-            const snappedY = Math.round((e.pageY - 50) / 10) * 10;
+            // Berechne Position relativ zum Content-Bereich
+            const contentRect = contentArea.getBoundingClientRect();
+            const relativeX = e.pageX - (contentRect.left + window.scrollX) - 50;
+            const relativeY = e.pageY - (contentRect.top + window.scrollY) - 50;
+            
+            // Runde auf 10er-Raster, aber mindestens bei 10 beginnend
+            const snappedRelX = Math.max(10, Math.round(relativeX / 10) * 10) + 1;
+            const snappedRelY = Math.max(10, Math.round(relativeY / 10) * 10) + 1;
+            
+            // Konvertiere zurück zu absoluten Koordinaten für die Anzeige
+            const snappedX = snappedRelX + (contentRect.left + window.scrollX);
+            const snappedY = snappedRelY + (contentRect.top + window.scrollY);
 
             draggedSquare.style.left = snappedX + 'px';
             draggedSquare.style.top = snappedY + 'px';
@@ -120,7 +129,6 @@ document.addEventListener('DOMContentLoaded', function() {
             lastSnappedY = snappedY;
             
             // Prüfe, ob das Quadrat vollständig im Content-Bereich ist
-            const contentRect = contentArea.getBoundingClientRect();
             const mouseX = e.clientX;
             const mouseY = e.clientY;
             
